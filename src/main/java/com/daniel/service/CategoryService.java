@@ -8,6 +8,7 @@ import com.daniel.pojo.Category;
 public interface CategoryService {
 
     List<Category> list();
+    List<Category> getAllCategories();
     Category get(int id);
     void update(Category category);
     void delete(int id);

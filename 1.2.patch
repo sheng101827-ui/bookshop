@@ -1,0 +1,108 @@
+diff --git a/src/main/java/com/daniel/service/CategoryService.java b/src/main/java/com/daniel/service/CategoryService.java
+index 9ee5015..cdb7ead 100644
+--- a/src/main/java/com/daniel/service/CategoryService.java
++++ b/src/main/java/com/daniel/service/CategoryService.java
+@@ -8,6 +8,7 @@ import com.daniel.pojo.Category;
+ public interface CategoryService {
+ 
+     List<Category> list();
++    List<Category> getAllCategories();
+     Category get(int id);
+     void update(Category category);
+     void delete(int id);
+diff --git a/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java b/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
+index 821650b..2bd19e8 100644
+--- a/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
++++ b/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
+@@ -10,17 +10,49 @@ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
++import redis.clients.jedis.Jedis;
++import redis.clients.jedis.JedisPool;
++import com.alibaba.fastjson.JSON;
++
+ @Service
+ public class CategoryServiceImpl implements CategoryService{
+ 
+     @Autowired
+     CategoryDAO categoryDAO;
+ 
++    @Autowired
++    JedisPool jedisPool;
++
+     @Override
+     public List<Category> list() {
+         return categoryDAO.list();
+     }
+ 
++    @Override
++    public List<Category> getAllCategories() {
++        Jedis jedis = null;
++        try {
++            jedis = jedisPool.getResource();
++            String categoriesJson = jedis.get("categoryList");
++            if (categoriesJson != null && !categoriesJson.isEmpty()) {
++                return JSON.parseArray(categoriesJson, Category.class);
++            } else {
++                List<Category> categories = categoryDAO.list();
++                if (categories != null) {
++                    jedis.set("categoryList", JSON.toJSONString(categories));
++                }
++                return categories;
++            }
++        } catch (Exception e) {
++            e.printStackTrace();
++            return null;
++        } finally {
++            if (jedis != null) {
++                jedis.close();
++            }
++        }
++    }
++
+     @Override
+     public Category get(int id) {
+         return categoryDAO.get(id);
+@@ -43,7 +75,10 @@ public class CategoryServiceImpl implements CategoryService{
+ 
+     @Override
+     public Map<Integer, String> listByMap() {
+-        List<Category> categories = categoryDAO.list();
++        List<Category> categories = getAllCategories();
++        if (categories == null) {
++            return null;
++        }
+         Map<Integer, String> categoriesMap = new HashMap<>();
+         for (Category category : categories) {
+             categoriesMap.put(category.getId(),category.getName());
+diff --git a/src/main/resources/spring/spring-dao.xml b/src/main/resources/spring/spring-dao.xml
+index 1b521ae..566c095 100644
+--- a/src/main/resources/spring/spring-dao.xml
++++ b/src/main/resources/spring/spring-dao.xml
+@@ -15,7 +15,24 @@
+     <context:annotation-config />
+ 
+     <!-- 1.配置数据库相关参数properties的属性：${url} -->
+-    <context:property-placeholder location="classpath:jdbc.properties"/>
++    <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties"/>
++
++    <!-- Redis 连接池配置 -->
++    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
++        <property name="maxTotal" value="${redis.maxTotal}" />
++        <property name="maxIdle" value="${redis.maxIdle}" />
++        <property name="minIdle" value="${redis.minIdle}" />
++        <property name="maxWaitMillis" value="${redis.maxWaitMillis}" />
++        <property name="testOnBorrow" value="${redis.testOnBorrow}" />
++    </bean>
++
++    <bean id="jedisPool" class="redis.clients.jedis.JedisPool">
++        <constructor-arg name="poolConfig" ref="jedisPoolConfig" />
++        <constructor-arg name="host" value="${redis.host}" />
++        <constructor-arg name="port" value="${redis.port}" type="int" />
++        <constructor-arg name="timeout" value="3000" type="int" />
++        <constructor-arg name="password" value="${redis.password}" />
++    </bean>
+ 
+     <!-- 2.数据库连接池 -->
+     <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
