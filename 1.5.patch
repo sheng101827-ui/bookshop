@@ -1,0 +1,79 @@
+diff --git a/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java b/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
+index 821650b..d7987fb 100644
+--- a/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
++++ b/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
+@@ -1,10 +1,13 @@
+ package com.daniel.service.impl;
+ 
++import com.alibaba.fastjson.JSON;
+ import com.daniel.dao.CategoryDAO;
+ import com.daniel.pojo.Category;
+ import com.daniel.service.CategoryService;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
++import redis.clients.jedis.Jedis;
++import redis.clients.jedis.JedisPool;
+ 
+ import java.util.HashMap;
+ import java.util.List;
+@@ -15,10 +18,24 @@ public class CategoryServiceImpl implements CategoryService{
+ 
+     @Autowired
+     CategoryDAO categoryDAO;
++    @Autowired
++    JedisPool jedisPool;
++
++    private static final String CACHE_KEY = "category:list";
+ 
+     @Override
+     public List<Category> list() {
+-        return categoryDAO.list();
++        try (Jedis jedis = jedisPool.getResource()) {
++            String cached = jedis.get(CACHE_KEY);
++            if (cached != null) {
++                return JSON.parseArray(cached, Category.class);
++            }
++            List<Category> categories = categoryDAO.list();
++            jedis.set(CACHE_KEY, JSON.toJSONString(categories));
++            return categories;
++        } catch (Exception e) {
++            return null;
++        }
+     }
+ 
+     @Override
+diff --git a/src/main/resources/spring/spring-dao.xml b/src/main/resources/spring/spring-dao.xml
+index 1b521ae..4fc4e7a 100644
+--- a/src/main/resources/spring/spring-dao.xml
++++ b/src/main/resources/spring/spring-dao.xml
+@@ -16,6 +16,7 @@
+ 
+     <!-- 1.配置数据库相关参数properties的属性：${url} -->
+     <context:property-placeholder location="classpath:jdbc.properties"/>
++    <context:property-placeholder location="classpath:redis.properties"/>
+ 
+     <!-- 2.数据库连接池 -->
+     <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+@@ -67,4 +68,21 @@
+         <property name="basePackage" value="com.daniel.dao"/>
+     </bean>
+ 
++    <!-- 5.配置Jedis连接池 -->
++    <bean id="jedisPool" class="redis.clients.jedis.JedisPool">
++        <constructor-arg index="0">
++            <bean class="redis.clients.jedis.JedisPoolConfig">
++                <property name="maxIdle" value="${redis.maxIdle}" />
++                <property name="minIdle" value="${redis.minIdle}" />
++                <property name="maxWaitMillis" value="${redis.maxWaitMillis}" />
++                <property name="testOnBorrow" value="${redis.testOnBorrow}" />
++                <property name="maxTotal" value="${redis.maxTotal}" />
++            </bean>
++        </constructor-arg>
++        <constructor-arg index="1" value="${redis.host}" />
++        <constructor-arg index="2" value="${redis.port}" />
++        <constructor-arg index="3" value="2000" />
++        <constructor-arg index="4" value="${redis.password}" />
++    </bean>
++
+ </beans>
+\ No newline at end of file
