@@ -16,4 +16,7 @@ public interface CategoryService {
     //获取一个Key为CategoryId，Value为CategoryName的Map
     Map<Integer,String> listByMap();
 
+    //获取所有分类，使用Redis缓存
+    Map<Integer,String> getAllCategories();
+
 }

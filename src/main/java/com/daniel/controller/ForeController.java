@@ -26,7 +26,7 @@ public class ForeController {
     @RequestMapping("/home.do")
     public ModelAndView goHome() {
         ModelAndView mav =new ModelAndView("home");
-        Map<Integer, String> categories = categoryService.listByMap();
+        Map<Integer, String> categories = categoryService.getAllCategories();
         Map<Category,List<Book>> booksMap = bookService.listByCategory();
         mav.addObject("categories",categories);
         mav.addObject("booksMap",booksMap);

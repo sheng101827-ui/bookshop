@@ -15,7 +15,24 @@
     <context:annotation-config />
 
     <!-- 1.配置数据库相关参数properties的属性：${url} -->
-    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties"/>
+    
+    <!-- 5.配置JedisPool -->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="${redis.maxTotal}"/>
+        <property name="maxIdle" value="${redis.maxIdle}"/>
+        <property name="minIdle" value="${redis.minIdle}"/>
+        <property name="maxWaitMillis" value="${redis.maxWaitMillis}"/>
+        <property name="testOnBorrow" value="${redis.testOnBorrow}"/>
+    </bean>
+    
+    <bean id="jedisPool" class="redis.clients.jedis.JedisPool">
+        <constructor-arg index="0" ref="jedisPoolConfig"/>
+        <constructor-arg index="1" value="${redis.host}"/>
+        <constructor-arg index="2" value="${redis.port}"/>
+        <constructor-arg index="3" value="3000"/>
+        <constructor-arg index="4" value="${redis.password}"/>
+    </bean>
 
     <!-- 2.数据库连接池 -->
     <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
