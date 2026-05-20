@@ -3,10 +3,10 @@ package com.daniel.controller;
 import com.alibaba.fastjson.JSONObject;
 import com.daniel.common.Result;
 import com.daniel.common.ResultGenerator;
-import com.daniel.pojo.Book;
 import com.daniel.pojo.BookImage;
 import com.daniel.pojo.Category;
 import com.daniel.pojo.User;
+import com.daniel.dao.BookDAO;
 import com.daniel.service.BookImageService;
 import com.daniel.service.BookService;
 import com.daniel.service.CategoryService;
@@ -36,9 +36,9 @@ public class BookController {
     private BookImageService bookImageService;
     @Autowired
     private CategoryService categoryService;
+    @Autowired
+    private BookDAO bookDAO;
 
-    // 日志文件
-    private static final Logger log = Logger.getLogger(BookController.class);
 
     /**
      * 书本详情页
@@ -202,5 +202,11 @@ public class BookController {
         }else {
             return ResultGenerator.genFailResult("删除失败！未选中图书");
         }
+    }
+
+    @RequestMapping(value = "/delete", method = RequestMethod.GET)
+    public ModelAndView deleteBook(@RequestParam("id") int id) {
+        bookDAO.delete(id);
+        return new ModelAndView("redirect:/myBookshelf.do");
     }
 }
