@@ -15,7 +15,7 @@
     <context:annotation-config />
 
     <!-- 1.配置数据库相关参数properties的属性：${url} -->
-    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties"/>
 
     <!-- 2.数据库连接池 -->
     <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
@@ -65,6 +65,21 @@
         <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
         <!-- 给出需要扫描Dao接口包 -->
         <property name="basePackage" value="com.daniel.dao"/>
+    </bean>
+
+<!-- 5.配置JedisPool -->
+    <bean id="jedisPool" class="redis.clients.jedis.JedisPool">
+        <constructor-arg name="poolConfig">
+            <bean class="redis.clients.jedis.JedisPoolConfig">
+                <property name="maxTotal" value="${redis.maxTotal}" />
+                <property name="maxIdle" value="${redis.maxIdle}" />
+                <property name="minIdle" value="${redis.minIdle}" />
+                <property name="maxWaitMillis" value="${redis.maxWaitMillis}" />
+                <property name="testOnBorrow" value="${redis.testOnBorrow}" />
+            </bean>
+        </constructor-arg>
+        <constructor-arg name="host" value="${redis.host}" />
+        <constructor-arg name="port" value="${redis.port}" />
     </bean>
 
 </beans>
