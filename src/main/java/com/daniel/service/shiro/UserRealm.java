@@ -24,10 +24,15 @@ public class UserRealm extends AuthorizingRealm {
 
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-        User user = (User) principals.getPrimaryPrincipal();
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
-        if (user != null && StringUtils.hasText(user.getMajor())) {
-            authorizationInfo.addRole(user.getMajor().trim());
+        User principalUser = (User) principals.getPrimaryPrincipal();
+        if (principalUser == null || !StringUtils.hasText(principalUser.getStudentid())) {
+            return authorizationInfo;
+        }
+
+        User currentUser = userService.getByStudentid(principalUser.getStudentid());
+        if (currentUser != null && StringUtils.hasText(currentUser.getMajor())) {
+            authorizationInfo.addRole(currentUser.getMajor().trim());
         }
         return authorizationInfo;
     }
@@ -36,6 +41,10 @@ public class UserRealm extends AuthorizingRealm {
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
         UsernamePasswordToken usernamePasswordToken = (UsernamePasswordToken) token;
         String studentid = usernamePasswordToken.getUsername();
+        if (!StringUtils.hasText(studentid)) {
+            throw new UnknownAccountException("账号不存在");
+        }
+
         User user = userService.getByStudentid(studentid);
         if (user == null) {
             throw new UnknownAccountException("账号不存在");

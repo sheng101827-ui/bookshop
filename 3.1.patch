@@ -1,41 +1,80 @@
 diff --git a/3.1.patch b/3.1.patch
-index c86c3f3..e69de29 100644
+index 49803c5..e69de29 100644
 --- a/3.1.patch
 +++ b/3.1.patch
-@@ -1 +0,0 @@
--none
-\ No newline at end of file
-diff --git a/src/main/webapp/WEB-INF/web.xml b/src/main/webapp/WEB-INF/web.xml
-index 70bb513..be1eabc 100644
---- a/src/main/webapp/WEB-INF/web.xml
-+++ b/src/main/webapp/WEB-INF/web.xml
-@@ -3,29 +3,6 @@
-                       http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
-          version="3.1" metadata-complete="true">
+@@ -1,41 +0,0 @@
+-diff --git a/3.1.patch b/3.1.patch
+-index c86c3f3..e69de29 100644
+---- a/3.1.patch
+-+++ b/3.1.patch
+-@@ -1 +0,0 @@
+--none
+-\ No newline at end of file
+-diff --git a/src/main/webapp/WEB-INF/web.xml b/src/main/webapp/WEB-INF/web.xml
+-index 70bb513..be1eabc 100644
+---- a/src/main/webapp/WEB-INF/web.xml
+-+++ b/src/main/webapp/WEB-INF/web.xml
+-@@ -3,29 +3,6 @@
+-                       http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+-          version="3.1" metadata-complete="true">
+- 
+--    <!-- 编码过滤器 -->
+--    <filter>
+--        <filter-name>CharacterEncodingFilter</filter-name>
+--        <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+--        <init-param>
+--            <param-name>encoding</param-name>
+--            <param-value>utf-8</param-value>
+--        </init-param>
+--    </filter>
+--    <filter-mapping>
+--        <filter-name>CharacterEncodingFilter</filter-name>
+--        <url-pattern>/</url-pattern>
+--    </filter-mapping>
+--
+--    <filter>
+--        <filter-name>HiddenHttpMethodFilter</filter-name>
+--        <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
+--    </filter>
+--    <filter-mapping>
+--        <filter-name>HiddenHttpMethodFilter</filter-name>
+--        <servlet-name>mvc-dispatcher</servlet-name>
+--        <url-pattern>/*</url-pattern>
+--    </filter-mapping>
+- 
+-     <!-- spring mvc核心：分发servlet -->
+-     <servlet>
+diff --git a/src/main/java/com/daniel/service/shiro/UserRealm.java b/src/main/java/com/daniel/service/shiro/UserRealm.java
+index 53dc1a9..c28ba1d 100644
+--- a/src/main/java/com/daniel/service/shiro/UserRealm.java
++++ b/src/main/java/com/daniel/service/shiro/UserRealm.java
+@@ -24,10 +24,15 @@ public class UserRealm extends AuthorizingRealm {
  
--    <!-- 编码过滤器 -->
--    <filter>
--        <filter-name>CharacterEncodingFilter</filter-name>
--        <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
--        <init-param>
--            <param-name>encoding</param-name>
--            <param-value>utf-8</param-value>
--        </init-param>
--    </filter>
--    <filter-mapping>
--        <filter-name>CharacterEncodingFilter</filter-name>
--        <url-pattern>/</url-pattern>
--    </filter-mapping>
--
--    <filter>
--        <filter-name>HiddenHttpMethodFilter</filter-name>
--        <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
--    </filter>
--    <filter-mapping>
--        <filter-name>HiddenHttpMethodFilter</filter-name>
--        <servlet-name>mvc-dispatcher</servlet-name>
--        <url-pattern>/*</url-pattern>
--    </filter-mapping>
- 
-     <!-- spring mvc核心：分发servlet -->
-     <servlet>
+     @Override
+     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
+-        User user = (User) principals.getPrimaryPrincipal();
+         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
+-        if (user != null && StringUtils.hasText(user.getMajor())) {
+-            authorizationInfo.addRole(user.getMajor().trim());
++        User principalUser = (User) principals.getPrimaryPrincipal();
++        if (principalUser == null || !StringUtils.hasText(principalUser.getStudentid())) {
++            return authorizationInfo;
++        }
++
++        User currentUser = userService.getByStudentid(principalUser.getStudentid());
++        if (currentUser != null && StringUtils.hasText(currentUser.getMajor())) {
++            authorizationInfo.addRole(currentUser.getMajor().trim());
+         }
+         return authorizationInfo;
+     }
+@@ -36,6 +41,10 @@ public class UserRealm extends AuthorizingRealm {
+     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+         UsernamePasswordToken usernamePasswordToken = (UsernamePasswordToken) token;
+         String studentid = usernamePasswordToken.getUsername();
++        if (!StringUtils.hasText(studentid)) {
++            throw new UnknownAccountException("账号不存在");
++        }
++
+         User user = userService.getByStudentid(studentid);
+         if (user == null) {
+             throw new UnknownAccountException("账号不存在");
