@@ -6,6 +6,7 @@ public class User {
     private String studentid;
     private String name;
     private String password;
+    private String salt;
     private char sex;
     private String tel;
     private String address;
@@ -41,6 +42,14 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getSalt() {
+        return salt;
+    }
+
+    public void setSalt(String salt) {
+        this.salt = salt;
     }
 
     public char getSex() {
