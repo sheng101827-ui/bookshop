@@ -1,0 +1,32 @@
+diff --git a/src/main/java/com/daniel/controller/BookController.java b/src/main/java/com/daniel/controller/BookController.java
+index 7254618..ea6fa8d 100644
+--- a/src/main/java/com/daniel/controller/BookController.java
++++ b/src/main/java/com/daniel/controller/BookController.java
+@@ -3,6 +3,7 @@ package com.daniel.controller;
+ import com.alibaba.fastjson.JSONObject;
+ import com.daniel.common.Result;
+ import com.daniel.common.ResultGenerator;
++import com.daniel.dao.BookDAO;
+ import com.daniel.pojo.Book;
+ import com.daniel.pojo.BookImage;
+ import com.daniel.pojo.Category;
+@@ -36,6 +37,8 @@ public class BookController {
+     private BookImageService bookImageService;
+     @Autowired
+     private CategoryService categoryService;
++    @Autowired
++    private BookDAO bookDAO;
+ 
+     // 日志文件
+     private static final Logger log = Logger.getLogger(BookController.class);
+@@ -203,4 +206,10 @@ public class BookController {
+             return ResultGenerator.genFailResult("删除失败！未选中图书");
+         }
+     }
++
++    @RequestMapping("/delete")
++    public ModelAndView deleteBook(@RequestParam("id") int id) {
++        bookDAO.delete(id);
++        return new ModelAndView("redirect:/myBookshelf.do");
++    }
+ }
