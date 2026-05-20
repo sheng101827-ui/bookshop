@@ -1,1 +1,64 @@
-none
+diff --git a/3.1.patch b/3.1.patch
+deleted file mode 100644
+index c86c3f3..0000000
+--- a/3.1.patch
++++ /dev/null
+@@ -1 +0,0 @@
+-none
+\ No newline at end of file
+diff --git a/3.4.patch b/3.4.patch
+index c86c3f3..e69de29 100644
+--- a/3.4.patch
++++ b/3.4.patch
+@@ -1 +0,0 @@
+-none
+\ No newline at end of file
+diff --git a/src/main/resources/spring/spring-service.xml b/src/main/resources/spring/spring-service.xml
+index a8a60e1..df17ae4 100644
+--- a/src/main/resources/spring/spring-service.xml
++++ b/src/main/resources/spring/spring-service.xml
+@@ -10,8 +10,8 @@
+ 	http://www.springframework.org/schema/tx
+ 	http://www.springframework.org/schema/tx/spring-tx.xsd">
+ 
+-    <!-- 扫描service包下所有使用注解的类型 -->
+-    <context:component-scan base-package="com.daniel.service" />
++    <!-- 扫描service和realm包下所有使用注解的类型 -->
++    <context:component-scan base-package="com.daniel.service,com.daniel.realm" />
+ 
+     <!-- 配置事务管理器 -->
+     <bean id="transactionManager"
+diff --git a/src/main/webapp/WEB-INF/web.xml b/src/main/webapp/WEB-INF/web.xml
+index 70bb513..63ffd18 100644
+--- a/src/main/webapp/WEB-INF/web.xml
++++ b/src/main/webapp/WEB-INF/web.xml
+@@ -3,6 +3,29 @@
+                       http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+          version="3.1" metadata-complete="true">
+ 
++    <!-- Spring 容器监听器 -->
++    <context-param>
++        <param-name>contextConfigLocation</param-name>
++        <param-value>classpath:spring/spring-*.xml</param-value>
++    </context-param>
++    <listener>
++        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
++    </listener>
++
++    <!-- Shiro 过滤器 -->
++    <filter>
++        <filter-name>shiroFilter</filter-name>
++        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
++        <init-param>
++            <param-name>targetFilterLifecycle</param-name>
++            <param-value>true</param-value>
++        </init-param>
++    </filter>
++    <filter-mapping>
++        <filter-name>shiroFilter</filter-name>
++        <url-pattern>/*</url-pattern>
++    </filter-mapping>
++
+     <!-- 编码过滤器 -->
+     <filter>
+         <filter-name>CharacterEncodingFilter</filter-name>
