@@ -1,0 +1,152 @@
+diff --git a/src/main/java/com/daniel/controller/ForeController.java b/src/main/java/com/daniel/controller/ForeController.java
+index e182385..11534f7 100644
+--- a/src/main/java/com/daniel/controller/ForeController.java
++++ b/src/main/java/com/daniel/controller/ForeController.java
+@@ -26,7 +26,7 @@ public class ForeController {
+     @RequestMapping("/home.do")
+     public ModelAndView goHome() {
+         ModelAndView mav =new ModelAndView("home");
+-        Map<Integer, String> categories = categoryService.listByMap();
++        Map<Integer, String> categories = categoryService.getAllCategories();
+         Map<Category,List<Book>> booksMap = bookService.listByCategory();
+         mav.addObject("categories",categories);
+         mav.addObject("booksMap",booksMap);
+@@ -48,7 +48,7 @@ public class ForeController {
+     public ModelAndView upload(Book book){
+         String path = book.getBookType()==1?"uploadSell":"uploadAsk";
+         ModelAndView mav = new ModelAndView(path);
+-        Map<Integer,String> categories = categoryService.listByMap();
++        Map<Integer,String> categories = categoryService.getAllCategories();
+         mav.addObject("categories",categories);
+         return mav;
+     }
+@@ -56,7 +56,7 @@ public class ForeController {
+     @RequestMapping("/goBookStore.do")
+     public ModelAndView goBookStore(Page page,Category category){
+         ModelAndView mav = new ModelAndView("bookStore");
+-        Map<Integer, String> categories = categoryService.listByMap();
++        Map<Integer, String> categories = categoryService.getAllCategories();
+         Category curCategory = category.getId() !=0?categoryService.get(category.getId()):new Category();
+         String categoryName = curCategory.getName() == null?"所有二手书":curCategory.getName();
+         int total = bookService.count();
+diff --git a/src/main/java/com/daniel/service/CategoryService.java b/src/main/java/com/daniel/service/CategoryService.java
+index 9ee5015..36e0f82 100644
+--- a/src/main/java/com/daniel/service/CategoryService.java
++++ b/src/main/java/com/daniel/service/CategoryService.java
+@@ -13,7 +13,8 @@ public interface CategoryService {
+     void delete(int id);
+     int count();
+ 
+-    //获取一个Key为CategoryId，Value为CategoryName的Map
++    Map<Integer, String> getAllCategories();
++
+     Map<Integer,String> listByMap();
+ 
+ }
+diff --git a/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java b/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
+index 821650b..99d30fe 100644
+--- a/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
++++ b/src/main/java/com/daniel/service/impl/CategoryServiceImpl.java
+@@ -1,10 +1,14 @@
+ package com.daniel.service.impl;
+ 
++import com.alibaba.fastjson.JSON;
++import com.alibaba.fastjson.TypeReference;
+ import com.daniel.dao.CategoryDAO;
+ import com.daniel.pojo.Category;
+ import com.daniel.service.CategoryService;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
++import redis.clients.jedis.Jedis;
++import redis.clients.jedis.JedisPool;
+ 
+ import java.util.HashMap;
+ import java.util.List;
+@@ -13,8 +17,12 @@ import java.util.Map;
+ @Service
+ public class CategoryServiceImpl implements CategoryService{
+ 
++    private static final String CATEGORY_CACHE_KEY = "category:all";
++
+     @Autowired
+     CategoryDAO categoryDAO;
++    @Autowired
++    private JedisPool jedisPool;
+ 
+     @Override
+     public List<Category> list() {
+@@ -42,12 +50,27 @@ public class CategoryServiceImpl implements CategoryService{
+     }
+ 
+     @Override
+-    public Map<Integer, String> listByMap() {
+-        List<Category> categories = categoryDAO.list();
+-        Map<Integer, String> categoriesMap = new HashMap<>();
+-        for (Category category : categories) {
+-            categoriesMap.put(category.getId(),category.getName());
++    public Map<Integer, String> getAllCategories() {
++        try (Jedis jedis = jedisPool.getResource()) {
++            String cacheValue = jedis.get(CATEGORY_CACHE_KEY);
++            if (cacheValue != null && !cacheValue.isEmpty()) {
++                return JSON.parseObject(cacheValue, new TypeReference<Map<Integer, String>>() {
++                });
++            }
++            List<Category> categories = categoryDAO.list();
++            Map<Integer, String> categoriesMap = new HashMap<>();
++            for (Category category : categories) {
++                categoriesMap.put(category.getId(), category.getName());
++            }
++            jedis.setex(CATEGORY_CACHE_KEY, 300, JSON.toJSONString(categoriesMap));
++            return categoriesMap;
++        } catch (Exception e) {
++            return null;
+         }
+-        return categoriesMap;
++    }
++
++    @Override
++    public Map<Integer, String> listByMap() {
++        return getAllCategories();
+     }
+ }
+diff --git a/src/main/resources/spring/spring-service.xml b/src/main/resources/spring/spring-service.xml
+index a8a60e1..7108f05 100644
+--- a/src/main/resources/spring/spring-service.xml
++++ b/src/main/resources/spring/spring-service.xml
+@@ -10,16 +10,30 @@
+ 	http://www.springframework.org/schema/tx
+ 	http://www.springframework.org/schema/tx/spring-tx.xsd">
+ 
+-    <!-- 扫描service包下所有使用注解的类型 -->
++    <context:property-placeholder location="classpath:redis.properties" />
++
+     <context:component-scan base-package="com.daniel.service" />
+ 
+-    <!-- 配置事务管理器 -->
++    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
++        <property name="maxIdle" value="${redis.maxIdle}" />
++        <property name="minIdle" value="${redis.minIdle}" />
++        <property name="maxWaitMillis" value="${redis.maxWaitMillis}" />
++        <property name="testOnBorrow" value="${redis.testOnBorrow}" />
++        <property name="maxTotal" value="${redis.maxTotal}" />
++    </bean>
++
++    <bean id="jedisPool" class="redis.clients.jedis.JedisPool">
++        <constructor-arg index="0" ref="jedisPoolConfig" />
++        <constructor-arg index="1" value="${redis.host}" />
++        <constructor-arg index="2" value="${redis.port}" />
++        <constructor-arg index="3" value="3000" />
++        <constructor-arg index="4" value="${redis.password}" />
++    </bean>
++
+     <bean id="transactionManager"
+           class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+-        <!-- 注入数据库连接池 -->
+         <property name="dataSource" ref="dataSource" />
+     </bean>
+ 
+-    <!-- 配置基于注解的声明式事务 -->
+     <tx:annotation-driven transaction-manager="transactionManager" />
+-</beans>
+\ No newline at end of file
++</beans>

@@ -26,7 +26,7 @@ public class ForeController {
     @RequestMapping("/home.do")
     public ModelAndView goHome() {
         ModelAndView mav =new ModelAndView("home");
-        Map<Integer, String> categories = categoryService.listByMap();
+        Map<Integer, String> categories = categoryService.getAllCategories();
         Map<Category,List<Book>> booksMap = bookService.listByCategory();
         mav.addObject("categories",categories);
         mav.addObject("booksMap",booksMap);
@@ -48,7 +48,7 @@ public class ForeController {
     public ModelAndView upload(Book book){
         String path = book.getBookType()==1?"uploadSell":"uploadAsk";
         ModelAndView mav = new ModelAndView(path);
-        Map<Integer,String> categories = categoryService.listByMap();
+        Map<Integer,String> categories = categoryService.getAllCategories();
         mav.addObject("categories",categories);
         return mav;
     }
@@ -56,7 +56,7 @@ public class ForeController {
     @RequestMapping("/goBookStore.do")
     public ModelAndView goBookStore(Page page,Category category){
         ModelAndView mav = new ModelAndView("bookStore");
-        Map<Integer, String> categories = categoryService.listByMap();
+        Map<Integer, String> categories = categoryService.getAllCategories();
         Category curCategory = category.getId() !=0?categoryService.get(category.getId()):new Category();
         String categoryName = curCategory.getName() == null?"所有二手书":curCategory.getName();
         int total = bookService.count();

@@ -13,7 +13,8 @@ public interface CategoryService {
     void delete(int id);
     int count();
 
-    //获取一个Key为CategoryId，Value为CategoryName的Map
+    Map<Integer, String> getAllCategories();
+
     Map<Integer,String> listByMap();
 
 }
