@@ -1,0 +1,15 @@
+diff --git a/Dockerfile b/Dockerfile
+new file mode 100644
+index 0000000..215f7f3
+--- /dev/null
++++ b/Dockerfile
+@@ -0,0 +1,9 @@
++FROM tomcat:8.5
++
++MAINTAINER YourName <youremail@example.com>
++
++COPY target/mybookshop.war /usr/local/tomcat/webapps/
++
++EXPOSE 8080
++
++CMD ["catalina.sh", "run"]
